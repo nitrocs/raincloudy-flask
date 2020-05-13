@@ -9,7 +9,7 @@
 #
 # Set your email, password
 # 
-# Usage: /api/[start|auto|stop|status|battery/[zone#]/[time in mins/0/1]
+# Usage: /api/[open|auto|close|status|battery/[zone#]/[time in mins/0/1]
 # 
 # 
 from flask import Flask, render_template, flash, request, jsonify
@@ -26,7 +26,7 @@ app = Flask(__name__)
 app.config.from_object(__name__)
 app.config['SECRET_KEY'] = '326240760871083756038276035325'
 
-valid_commands = ["start","auto", "stop", "status", "battery" ]
+valid_commands = ["open","auto","close","status","battery" ]
 
 config = {
     "email": "EMAILADDRESS", # fill in your email
@@ -35,12 +35,8 @@ config = {
 raincloudy = RainCloudy(config['email'], config['password'])
 
 def sendCommand(command,zone,time):
-	#if (valid_commands[command]):
 	if command in str(valid_commands):
 		raincloudy = RainCloudy(config['email'], config['password'])
-		#my_vac = api.devices()[device]
-		#vacbot = VacBot(api.uid, api.REALM, api.resource, api.user_access_token, my_vac, config['continent'])
-		#time.sleep(o0.5)
 		try:
 			controller = raincloudy.controller.status
 		except AttributeError:
@@ -50,13 +46,6 @@ def sendCommand(command,zone,time):
 		except AttributeError:
 			return("Faucet not found")
 		
-		#print(raincloudy.controllers)
-		#print(raincloudy.controller.status)
-		#print(raincloudy.controller.faucet.battery)
-		#print(raincloudy.controller.faucet_battery)
-		#test = raincloudy.controllers + raincloudy.controller.faucet_battery + raincloudy.status + raincloudy.controller.faucet.status
-		#test = raincloudy.controller.status + raincloudy.controller.faucet.status +  raincloudy.controller.faucet.battery
-	#	return(str(test))
 		if (command == "battery"):
 			return jsonify(battery=raincloudy.controller.faucet.battery)
 		if (command == "status"):
@@ -69,7 +58,6 @@ def sendCommand(command,zone,time):
 				rain_delay = getattr(zone,'rain_delay')
 				name = getattr(zone,'name')
 				return jsonify(zone="zone1",auto_watering=auto_watering, is_watering=is_watering, watering_time=watering_time, rain_delay=rain_delay, name=name)
-				#battery=raincloudy.controller.faucet.battery)
 			elif (zone == 2):
 				zone = raincloudy.controller.faucet.zone2
 				auto_watering = getattr(zone,'auto_watering')
@@ -113,7 +101,7 @@ def sendCommand(command,zone,time):
 					count+=1
 				print("}")
 				#return jsonify(out)
-		if (command == "start") and (time > 0) and (time < 61):
+		if (command == "open") and (zone > 0) and (zone < 5) and (time > 0) and (time < 61):
 			if (zone == 1):
 				raincloudy.controller.faucet.zone1.watering_time=time  #manual_watering
 				return(jsonify(zone="zone1",watering_time=time))
@@ -127,7 +115,7 @@ def sendCommand(command,zone,time):
 				raincloudy.controller.faucet.zone4.watering_time=time
 				return(jsonify(zone="zone4",watering_time=time))
 			else:
-				return("Error: /api/start/[zone 1-4]/[1-60]")
+				return("Error: /api/open/[zone 1-4]/[1-60]")
 		if (command == "auto") and (zone > 0) and (zone < 5) and (time <= 1):
 			if (zone == 1):
 				raincloudy.controller.faucet.zone1.auto_watering=time
@@ -144,7 +132,7 @@ def sendCommand(command,zone,time):
 				return(jsonify(zone="zone4",auto_watering=time))
 			else:
 				return("Error: /api/auto/[zone 1-4]/[0/1]")
-		if (command =="stop"):
+		if (command =="close"):
 			if (zone == 1):
 				raincloudy.controller.faucet.zone1.watering_time=0  #manual_watering
 				return(jsonify(zone="zone1",watering_time=0))
@@ -158,11 +146,11 @@ def sendCommand(command,zone,time):
 				raincloudy.controller.faucet.zone4.watering_time=0
 				return(jsonify(zone="zone4",watering_time=0))
 			else:
-				print("Error: /api/stop/[zone 1-4]")
+				print("Error: /api/close/[zone 1-4]")
 
 @app.route("/", methods=['GET'])
 def info():
-	return("/api/[start|stop|auto|status|battery/[zone#]/[time in mins/0/1]")
+	return("/api/[open|close|auto|status|battery/[zone#]/[time in mins/0/1]")
 
 @app.route("/api/<string:command>", methods=['GET'])
 @app.route("/api/<string:command>/<int:zone>", methods=['GET'])
@@ -170,12 +158,7 @@ def info():
 def api(command,zone=0,time=0):
 	try:
 		val = sendCommand(command,zone,time)
-		#print("VAL:" + val)
 		return val
-		#if val:
-		#	return str(val)
-		#else:
-		#	return 'Error executing ' + command
 	except:
 		return "Error executing " + command
  
