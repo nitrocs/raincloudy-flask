@@ -9,13 +9,13 @@
 #
 # Set your email, password
 # 
-# Usage: /api/[open|auto|close|status|battery/[zone#]/[time in mins/0/1]
-# 
+# Usage: /api/[controllerid]/[valveid]/[open|auto|close|status|battery/[zone#]/[time in mins/0/1]
 # 
 from flask import Flask, render_template, flash, request, jsonify
 from raincloudy.core import RainCloudy
 from raincloudy.faucet import RainCloudyFaucetZone
-from raincloudy.helpers import serial_finder
+from raincloudy.controller import RainCloudyController 
+from raincloudy.helpers import generate_soup_html, faucet_serial_finder, controller_serial_finder
 from raincloudy import *
 from pprint import pprint
 import json
@@ -26,138 +26,66 @@ app = Flask(__name__)
 app.config.from_object(__name__)
 app.config['SECRET_KEY'] = '326240760871083756038276035325'
 
-valid_commands = ["open","auto","close","status","battery" ]
+valid_commands = ["open","auto", "close", "status", "battery" ]
 
 config = {
     "email": "EMAILADDRESS", # fill in your email
     "password": "PASSWORD" 
 }
-raincloudy = RainCloudy(config['email'], config['password'])
 
-def sendCommand(command,zone,time):
+rdy = RainCloudy(config['email'], config['password'], ssl_warnings=False)
+
+def sendCommand(c,f,command,zone,time):
+	#if (valid_commands[command]):
 	if command in str(valid_commands):
-		raincloudy = RainCloudy(config['email'], config['password'])
-		try:
-			controller = raincloudy.controller.status
-		except AttributeError:
-			return("Controller not found")
-		try: 
-			faucet = raincloudy.controller.faucet.status
-		except AttributeError:
-			return("Faucet not found")
-		
-		if (command == "battery"):
-			return jsonify(battery=raincloudy.controller.faucet.battery)
-		if (command == "status"):
-			#raincloudy.controller.update()
-			if (zone == 1):
-				zone = raincloudy.controller.faucet.zone1
-				auto_watering = getattr(zone,'auto_watering')
-				is_watering = getattr(zone,'is_watering')
-				watering_time = getattr(zone,'watering_time')
-				rain_delay = getattr(zone,'rain_delay')
-				name = getattr(zone,'name')
-				return jsonify(zone="zone1",auto_watering=auto_watering, is_watering=is_watering, watering_time=watering_time, rain_delay=rain_delay, name=name)
-			elif (zone == 2):
-				zone = raincloudy.controller.faucet.zone2
-				auto_watering = getattr(zone,'auto_watering')
-				is_watering = getattr(zone,'is_watering')
-				watering_time = getattr(zone,'watering_time')
-				rain_delay = getattr(zone,'rain_delay')
-				name = getattr(zone,'name')
-				return jsonify(zone="zone2",auto_watering=auto_watering, is_watering=is_watering, watering_time=watering_time, rain_delay=rain_delay, name=name)
-			elif (zone == 3):
-				zone = raincloudy.controller.faucet.zone3
-				auto_watering = getattr(zone,'auto_watering')
-				is_watering = getattr(zone,'is_watering')
-				watering_time = getattr(zone,'watering_time')
-				rain_delay = getattr(zone,'rain_delay')
-				name = getattr(zone,'name')
-				return jsonify(zone="zone3",auto_watering=auto_watering, is_watering=is_watering, watering_time=watering_time, rain_delay=rain_delay, name=name)
-			elif (zone == 4):
-				zone = raincloudy.controller.faucet.zone4
-				auto_watering = getattr(zone,'auto_watering')
-				is_watering = getattr(zone,'is_watering')
-				watering_time = getattr(zone,'watering_time')
-				rain_delay = getattr(zone,'rain_delay')
-				name = getattr(zone,'name')
-				return jsonify(zone="zone4",auto_watering=auto_watering, is_watering=is_watering, watering_time=watering_time, rain_delay=rain_delay, name=name)
+		rdy.update()
+		for controller in rdy.controllers:
+			if ((controller.id == c) and (controller.status == 'Online')):
+				for faucet in controller.faucets:
+					if ((faucet.id == f) and (faucet.status == 'Online')):
+						z = zone - 1
+						pZone = "zone" + str(zone)
+						if (command == "battery"):
+							return jsonify(battery=faucet.battery)
+						elif (command == "status"):
+							if (zone > 0 and zone < 5):
+								watering_time = getattr(faucet.zones[z],'watering_time')
+								auto_watering = getattr(faucet.zones[z],'auto_watering')
+								is_watering = getattr(faucet.zones[z],'is_watering')
+								rain_delay = getattr(faucet.zones[z],'rain_delay')
+								name = getattr(faucet.zones[z],'name')
+								return(jsonify(zone=pZone,auto_watering=auto_watering,is_watering=is_watering,watering_time=watering_time,rain_delay=rain_delay,name=name))
+							else:
+								return("/api/[controllerid]/[faucetid]/[open|close|status|battery/[zone#]/[time in mins/0/1]")
+						elif (command == "open") and (time > 0) and (time < 61) and (zone > 0) and (zone < 5):
+							setattr(faucet.zones[z], 'manual_watering', time)
+							return(jsonify(zone=pZone,watering_time=time))
+						elif (command == "auto") and (zone > 0) and (zone < 5) and (time <= 1):
+							setattr(faucet.zones[z], 'auto_watering', time)
+							pprint("here")
+							return(jsonify(zone=pZone,auto_watering=time))
+						elif (command =="close"):
+							setattr(faucet.zones[z], 'manual_watering', 0)
+							return(jsonify(zone=pZone,watering_time=0))
+						else:
+							return("/api/[controllerid]/[faucetid]/[open|close|status|battery/[zone#]/[time in mins/0/1]")
+					else:
+						return("Invalid faucet ID or faucet ID offline")
 			else:
-				return("Error: /api/status/[zone 1-4]");
-				# should we return all statuses? Would it matter if
-				# we break this down to individual HE drivers?
-				print("{")
-				count=1
-				for zone in raincloudy.controller.faucet.zones:
-					#print(getattr(zone,'is_watering'))
-					print("'zone" + str(count) + "':")
-					#print(zone._to_dict())
-					auto_watering = getattr(zone,'auto_watering')
-					is_watering = getattr(zone,'is_watering')
-					watering_time = getattr(zone,'watering_time')
-					rain_delay = getattr(zone,'rain_delay')
-					if (count < 4):
-						print(",")
-					count+=1
-				print("}")
-				#return jsonify(out)
-		if (command == "open") and (zone > 0) and (zone < 5) and (time > 0) and (time < 61):
-			if (zone == 1):
-				raincloudy.controller.faucet.zone1.watering_time=time  #manual_watering
-				return(jsonify(zone="zone1",watering_time=time))
-			elif (zone == 2):
-				raincloudy.controller.faucet.zone2.watering_time=time
-				return(jsonify(zone="zone2",watering_time=time))
-			elif (zone == 3):
-				raincloudy.controller.faucet.zone3.watering_time=time
-				return(jsonify(zone="zone3",watering_time=time))
-			elif (zone == 4):
-				raincloudy.controller.faucet.zone4.watering_time=time
-				return(jsonify(zone="zone4",watering_time=time))
-			else:
-				return("Error: /api/open/[zone 1-4]/[1-60]")
-		if (command == "auto") and (zone > 0) and (zone < 5) and (time <= 1):
-			if (zone == 1):
-				raincloudy.controller.faucet.zone1.auto_watering=time
-				#return(raincloudy.controller.faucet.zone1)
-				return(jsonify(zone="zone1",auto_watering=time))
-			elif (zone == 2):
-				raincloudy.controller.faucet.zone2.auto_watering=time
-				return(jsonify(zone="zone2",auto_watering=time))
-			elif (zone == 3):
-				raincloudy.controller.faucet.zone3.auto_watering=time
-				return(jsonify(zone="zone3",auto_watering=time))
-			elif (zone == 4):
-				raincloudy.controller.faucet.zone4.auto_watering=time
-				return(jsonify(zone="zone4",auto_watering=time))
-			else:
-				return("Error: /api/auto/[zone 1-4]/[0/1]")
-		if (command =="close"):
-			if (zone == 1):
-				raincloudy.controller.faucet.zone1.watering_time=0  #manual_watering
-				return(jsonify(zone="zone1",watering_time=0))
-			elif (zone == 2):
-				raincloudy.controller.faucet.zone2.watering_time=0
-				return(jsonify(zone="zone2",watering_time=0))
-			elif (zone == 3):
-				raincloudy.controller.faucet.zone3.watering_time=0
-				return(jsonify(zone="zone3",watering_time=0))
-			elif (zone == 4):
-				raincloudy.controller.faucet.zone4.watering_time=0
-				return(jsonify(zone="zone4",watering_time=0))
-			else:
-				print("Error: /api/close/[zone 1-4]")
+				return("Invalid controller ID. Check your controller id in your app - controller ID is case sensitive")
+	else:
+		return("/api/[controllerid]/[faucetid]/[open|close|status|battery/[zone#]/[time in mins/0/1]")
 
 @app.route("/", methods=['GET'])
 def info():
-	return("/api/[open|close|auto|status|battery/[zone#]/[time in mins/0/1]")
+	return("/api/[controllerid]/[faucetid]/[open|close|status|battery/[zone#]/[time in mins/0/1]")
 
-@app.route("/api/<string:command>", methods=['GET'])
-@app.route("/api/<string:command>/<int:zone>", methods=['GET'])
-@app.route("/api/<string:command>/<int:zone>/<int:time>", methods=['GET'])
-def api(command,zone=0,time=0):
+@app.route("/api/<string:controller>/<string:faucet>/<string:command>", methods=['GET'])
+@app.route("/api/<string:controller>/<string:faucet>/<string:command>/<int:zone>", methods=['GET'])
+@app.route("/api/<string:controller>/<string:faucet>/<string:command>/<int:zone>/<int:time>", methods=['GET'])
+def api(controller,faucet,command,zone=0,time=0):
 	try:
-		val = sendCommand(command,zone,time)
+		val = sendCommand(controller,faucet,command,zone,time)
 		return val
 	except:
 		return "Error executing " + command
