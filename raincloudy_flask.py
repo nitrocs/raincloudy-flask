@@ -27,16 +27,21 @@ app.config.from_object(__name__)
 app.config['SECRET_KEY'] = '326240760871083756038276035325'
 
 valid_commands = ["open","auto", "close", "status", "battery" ]
+api_commands = "[controllerid]/[faucetid]/[open|close|status|battery/[zone#]/[time in mins/0/1]"
 
 config = {
-    "email": "EMAILADDRESS", # fill in your email
+    "email": "EMAIL", # fill in your email
     "password": "PASSWORD" 
 }
 
 rdy = RainCloudy(config['email'], config['password'], ssl_warnings=False)
+rdy.update()
+for controller in rdy.controllers:
+	print("Controller: " + controller.id + "  Status: " + controller.status)
+	for faucet in controller.faucets:
+		print("> Faucet: " + faucet.id + "  Status: " + faucet.status)
 
 def sendCommand(c,f,command,zone,time):
-	#if (valid_commands[command]):
 	if command in str(valid_commands):
 		rdy.update()
 		for controller in rdy.controllers:
@@ -56,7 +61,7 @@ def sendCommand(c,f,command,zone,time):
 								name = getattr(faucet.zones[z],'name')
 								return(jsonify(zone=pZone,auto_watering=auto_watering,is_watering=is_watering,watering_time=watering_time,rain_delay=rain_delay,name=name))
 							else:
-								return("/api/[controllerid]/[faucetid]/[open|close|status|battery/[zone#]/[time in mins/0/1]")
+								return(api_commands)
 						elif (command == "open") and (time > 0) and (time < 61) and (zone > 0) and (zone < 5):
 							setattr(faucet.zones[z], 'manual_watering', time)
 							return(jsonify(zone=pZone,watering_time=time))
@@ -68,17 +73,17 @@ def sendCommand(c,f,command,zone,time):
 							setattr(faucet.zones[z], 'manual_watering', 0)
 							return(jsonify(zone=pZone,watering_time=0))
 						else:
-							return("/api/[controllerid]/[faucetid]/[open|close|status|battery/[zone#]/[time in mins/0/1]")
+							return(api_commands)
 					else:
-						return("Invalid faucet ID or faucet ID offline")
+						return("Invalid faucet ID or faucet ID offline.") 
 			else:
-				return("Invalid controller ID. Check your controller id in your app - controller ID is case sensitive")
+				return("Invalid controller ID. Check your controller id in your app - controller ID is case sensitive.")
 	else:
-		return("/api/[controllerid]/[faucetid]/[open|close|status|battery/[zone#]/[time in mins/0/1]")
+		return(api_commands)
 
 @app.route("/", methods=['GET'])
 def info():
-	return("/api/[controllerid]/[faucetid]/[open|close|status|battery/[zone#]/[time in mins/0/1]")
+	return(api_commands)
 
 @app.route("/api/<string:controller>/<string:faucet>/<string:command>", methods=['GET'])
 @app.route("/api/<string:controller>/<string:faucet>/<string:command>/<int:zone>", methods=['GET'])
