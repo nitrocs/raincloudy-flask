@@ -1,5 +1,7 @@
 # raincloudy-flask
-Python Flask API version of Melnor Raincloud Access using [raincloudy](https://github.com/vanstinator/raincloudy). 
+Python Flask API version of Melnor Raincloud Access using
+[raincloudy](https://github.com/vanstinator/raincloudy). I use this with
+[Hubitat](https://github.com/bdwilson/hubitat/tree/master/Raincloud).
 
 ## Work in progress / To Do
 * Put all controllers/faucets into a json dict that will always show statues of
