@@ -46,7 +46,7 @@ it via:
 </pre>
 
 # Hubitat
-See [here](https://github.com/bdwilson/hubitat/master/Raincloud). 
+See [here](https://github.com/bdwilson/hubitat/tree/master/Raincloud). 
 
 # Troubleshooting
 1. Your controller id and faucets should be listed when you start the image/script:
