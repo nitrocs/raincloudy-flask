@@ -9,7 +9,8 @@
 #
 # Set your email, password
 # 
-# Usage: /api/[controllerid]/[valveid]/[open|auto|close|status|battery/[zone#]/[time in mins/0/1]
+# Usage: /api/[controllerid]/[valveid]/[open|auto|close|rain|battery/[zone#]/[time in mins/0/1]
+# Usage: /api/status 
 # 
 from flask import Flask, render_template, flash, request, jsonify
 from raincloudy.core import RainCloudy
