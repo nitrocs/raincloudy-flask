@@ -31,9 +31,9 @@ multiples of each, it has not been tested.
 [Dockerfile](https://raw.githubusercontent.com/bdwilson/raincloudy-flask/master/Dockerfile)
 via wget and put it in a directory on your Docker server. Then run the commands
 below from that directory
-2. <code> # docker build -t ecovacs-api --build-arg EMAIL='your@email.address' --build-arg PASSWORD='your_password'  .</code>
+2. <code> # docker build -t raincloudy-flask --build-arg EMAIL='your@email.address' --build-arg PASSWORD='your_password'  .</code>
 CTRL-C out of it when it's complete. PORT is optional and will default to 5059
-3. Run your newly created image: <code> # docker run -p 5059:5059 --name raincloudy-flask -t raincloudy-flask</code> (if you changed the port when you built your image, you should also change it here)
+3. Run your newly created image: <code> # docker run --restart unless-stopped -p 5059:5059 --name raincloudy-flask -t raincloudy-flask</code> (if you changed the port when you built your image, you should also change it here)
 4. That's it. If you need to troubleshoot your docker image, you can get into
 it via:
 <code> # docker exec -it raincloudy-flask /bin/bash</code> or 
