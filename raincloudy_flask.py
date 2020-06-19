@@ -9,8 +9,7 @@
 #
 # Set your email, password
 # 
-# Usage: /api/[controllerid]/[valveid]/[open|auto|close|rain|battery/[zone#]/[time in mins/0/1]
-# Usage: /api/status 
+# Usage: /api/[controllerid]/[valveid]/[open|auto|close|status|battery/[zone#]/[time in mins/0/1]
 # 
 from flask import Flask, render_template, flash, request, jsonify
 from raincloudy.core import RainCloudy
@@ -25,14 +24,14 @@ import json
 DEBUG = False
 app = Flask(__name__)
 app.config.from_object(__name__)
-app.config['SECRET_KEY'] = '326325235371083756038276035325'
+app.config['SECRET_KEY'] = '326240760871083756038276035325'
 
 valid_commands = ["open","auto", "close", "status", "rain" ]
 api_commands = "[controllerid]/[faucetid]/[open|close|status|rain/[zone#]/[time in mins/0/1]"
 
 config = {
-    "email": "EMAIL", # fill in your email
-    "password": "PASSWORD" 
+    "email": "email", # fill in your email
+    "password": "password" 
 }
 
 controllers = {}
@@ -84,7 +83,6 @@ def status (rc):
 	return controllers
 
 def set (rc,cid,fid,zid,attr,val):
-	print("Calling set")
 	for controller in rc.controllers:
 		if ((controller.id == cid) and (controller.status == 'Online')):
 			for faucet in controller.faucets:
@@ -99,7 +97,7 @@ def sendCommand (c,f,command,zone,time):
 	if command in str(valid_commands):
 		if (command == "status"):
 			return(status(rdy))
-		elif (command == "open") and (time > 0) and (time < 61) and (zone > 0) and (zone < 5):
+		elif (command == "open") and (time >= 0) and (time < 61) and (zone > 0) and (zone < 5):
 			if (set(rdy,c,f,zone,'manual_watering',time)):
 				return(status(rdy))
 		elif (command == "auto") and (zone > 0) and (zone < 5) and (time <= 1):
@@ -108,7 +106,7 @@ def sendCommand (c,f,command,zone,time):
 		elif (command == "close"):
 			if (set(rdy,c,f,zone,"manual_watering",0)):
 				return(status(rdy))
-		elif (command == "rain") and (time > 0) and (time < 8) and (zone > 0) and (zone < 5):
+		elif (command == "rain") and (time >= 0) and (time < 8) and (zone > 0) and (zone < 5):
 			if (set(rdy,c,f,zone,"rain_delay",time)):
 				return(status(rdy))
 		else:
@@ -139,6 +137,6 @@ def api(controller,faucet,command,zone=0,time=0):
 		return "Error executing " + command
  
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=PORT, debug=False)
+    app.run(host='0.0.0.0', port=5059, debug=False)
 
 
